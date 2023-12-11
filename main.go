@@ -6,18 +6,21 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	_ "github.com/lib/pq"
 )
 
-const (
-	host     = "localhost"
-	port     = 5432
-	user     = "postgres"
-	password = "password"
-	dbname   = "postgres"
-)
+type dbData struct {
+	Host string `json:"host"`
+	Port string `json:"port"`
+	User string `json:"user"`
+	Passowrd string `json:"password"`
+	Dbname string `json:"dbname"`
+}
+
+
 type LoginDetails struct{
 Email string `json:"username"`
 //password string `json:password`
@@ -29,7 +32,7 @@ type LoginResult struct {
 func getUserID(data LoginDetails)LoginResult{
 	psqlinfo := fmt.Sprintf("host=%s port=%d user=%s "+
 		"password=%s dbname=%s sslmode=disable",
-		host, port, user, password, dbname)
+		dbData.Host, dbData.Port, dbData.User, dbData.Passowrd, dbData.Dbname)
 	db, err := sql.Open("postgres", psqlinfo)
 	if err != nil {
 		log.Fatal(err)
@@ -91,7 +94,21 @@ func (h MyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request){
 		http.NotFound(w,r)
 	}
 }
-
+var GlobalDbDataError bool = false
+func readData(){
+	file, err := os.ReadFile("data.json")
+	if err != nil{
+		GlobalDbDataError = true
+		return
+	}
+	var db dbData
+	err = json.Unmarshal(file, &db)
+	if err != nil{
+		GlobalDbDataError = true
+	}
+	
+	
+}
 func main() {
 	var h MyHandler
 	fmt.Println("Listen and served")

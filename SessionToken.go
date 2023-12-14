@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"github.com/google/uuid"
 )
 
 func CreateToken(userID int, db *sql.DB, w http.ResponseWriter, r *http.Request){
@@ -14,5 +15,6 @@ func CreateToken(userID int, db *sql.DB, w http.ResponseWriter, r *http.Request)
 		return
 	}
 	
+
 }
 

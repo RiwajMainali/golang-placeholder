@@ -18,7 +18,7 @@ type dbData struct {
 	Passowrd string `json:"password"`
 	Dbname string `json:"dbname"`
 }
-
+func returnData (w http.ResponseWriter, r *http.Request)
 
 var dbDatas dbData;
 type LoginDetails struct{
@@ -29,7 +29,7 @@ type LoginResult struct {
 	UserID int `json:"UserID"`
 	UserName string `json:"UserName"`
 }
-// returns the data
+// returns the user details from DB as json
 func getUserID(data LoginDetails, db *sql.DB)LoginResult{
 	rows, err2 := db.Query("select user_id, name from users where email=$1", data.Email)
 	if err2!=nil{

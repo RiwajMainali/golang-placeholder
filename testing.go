@@ -2,11 +2,8 @@ package main
 
 import (
 	_ "fmt"
-	"net/http"
+	_ "net/http"
 )
 
-func test(){
-	body := ""
-
-	http.Post()
+func test() {
 }

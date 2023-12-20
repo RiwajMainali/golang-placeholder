@@ -1,0 +1,9 @@
+{
+	"message":"string",
+	"success":true,
+	"data":{
+		"userData1": "string",
+		"userdata2": ["string1","string2","string3"],
+		"userdata3": 2
+	}
+}

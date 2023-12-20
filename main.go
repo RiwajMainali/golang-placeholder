@@ -19,9 +19,10 @@ type dbData struct {
 	Dbname   string `json:"dbname"`
 }
 
-func returnData(w http.ResponseWriter, r *http.Request){
-	return 
+func returnData(w http.ResponseWriter, r *http.Request) {
+	return
 }
+
 var dbDatas dbData
 
 type LoginDetails struct {
@@ -54,21 +55,45 @@ func getUserID(data LoginDetails, db *sql.DB) LoginResult {
 
 // parses incoming data, sends to getUserId for returned data
 func handleLogin(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-	if r.Method == "POST" {
-		var loginData LoginDetails
-		err := json.NewDecoder(r.Body).Decode(&loginData)
-		if err != nil {
-			log.Fatal(err)
+	if r.Method != "POST" {
+		message := Response{
+			Message: StrPtr("Please use POST"),
+			Success: false,
+			Data:    nil,
 		}
-		var user LoginResult
-		user = getUserID(loginData, db)
-		res, err := json.Marshal(user)
-		if err != nil {
-			log.Fatal(err)
-		}
-		w.Header().Set("Content-type", "application/json")
-		fmt.Fprintf(w, string(res))
+		fmt.Fprintf(w, toJSON(message))
+		return 
 	}
+	var loginData LoginDetails
+	err := json.NewDecoder(r.Body).Decode(&loginData)
+	if err != nil {
+		log.Fatal(err)
+	}
+	var user LoginResult
+	user = getUserID(loginData, db)
+	userToken, tokenErr := CreateToken(user.UserID, db)
+	if tokenErr != nil {
+		message := Response{
+			Message: tokenErr,
+			Success: false,
+			Data:    nil,
+		}
+
+		w.Header().Set("Content-type", "application/json")
+		fmt.Fprintf(w, toJSON(message))
+		return
+	}
+	response := Response{
+		Message: nil,
+		Success: true,
+		Data: map[string]interface{}{
+			"token": userToken.user_token,
+			"time":  userToken.token_time,
+		},
+	}
+	w.Header().Set("Content-type", "application/json")
+	fmt.Fprintf(w, toJSON(response))
+	return
 }
 
 func handleRegister(w http.ResponseWriter, r *http.Request) {
@@ -93,7 +118,7 @@ func (h MyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		handleRegister(w, r)
 	case "/token":
 		fmt.Print("/token")
-		GetToken(1, h.db, w, r)
+		SendToken(1, h.db, w, r)
 	default:
 		http.NotFound(w, r)
 	}
@@ -104,7 +129,7 @@ var GlobalDbDataError bool = false
 func readData() {
 	file, err := os.ReadFile("data.json")
 	if err != nil {
-		GlobalDbDataError = true
+		log.Fatal("cannot read data")
 		return
 	}
 	err = json.Unmarshal(file, &dbDatas)

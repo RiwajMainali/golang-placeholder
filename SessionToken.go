@@ -22,6 +22,15 @@ func ClearToken(userID int, db *sql.DB) bool {
 	}
 	return true
 }
+func CheckStatus(userID int, db *sql.DB)(*bool, *string){
+	var exists bool
+	err := db.QueryRow("SELECT EXISTS (SELECT * FROM users WHERE user_token is null and user_id=$1);", userID).Scan(&exists)
+	if err != nil {
+		return &exists, StrPtr("Unable to create session")
+	}
+	return &exists, nil
+
+}
 func CreateToken(userID int, db *sql.DB) (*token, *string) {
 	tokenTime := time.Now().Add(24 * time.Hour).Unix()
 	userToken := uuid.New()
@@ -62,6 +71,7 @@ func SendToken(userID int, db *sql.DB, w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, toJSON(message))
 		return
 	}
+	
 	rows, err := db.Query("select user_token, token_time from users where user_token is not null and user_id=$1;", userID)
 	defer rows.Close()
 	if err != nil {

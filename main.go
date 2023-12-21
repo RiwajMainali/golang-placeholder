@@ -4,12 +4,11 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	_ "github.com/lib/pq"
 	"log"
 	"net/http"
 	"os"
 	"strings"
-
-	_ "github.com/lib/pq"
 )
 
 type dbData struct {
@@ -17,10 +16,6 @@ type dbData struct {
 	User     string `json:"user"`
 	Passowrd string `json:"password"`
 	Dbname   string `json:"dbname"`
-}
-
-func returnData(w http.ResponseWriter, r *http.Request) {
-	return
 }
 
 var dbDatas dbData
@@ -35,23 +30,23 @@ type LoginResult struct {
 }
 
 // returns the user details from DB as json
-func getUserID(data LoginDetails, db *sql.DB) LoginResult {
-	rows, err2 := db.Query("select user_id, name from users where email=$1", data.Email)
-	if err2 != nil {
-		log.Fatal(err2)
-	}
-	defer rows.Close()
-	var user LoginResult
-
-	for rows.Next() {
-		err := rows.Scan(&user.UserID, &user.UserName)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-	return user
-
-}
+// func getUserID(data LoginDetails, db *sql.DB, w http.ResponseWriter) LoginResult, *string {
+// 	rows, err2 := db.Query("select user_id, name from users where email=$1", data.Email)
+// 	if err2 != nil {
+// 		SendErrorMessage(err2.Error(), w)
+// 		return
+// 	}
+// 	defer rows.Close()
+// 	var user LoginResult
+//
+// 	for rows.Next() {
+// 		err := rows.Scan(&user.UserID, &user.UserName)
+// 		if err != nil {
+// 			log.Fatal(err)
+// 		}
+// 	}
+// 	return user, nil
+// }
 
 // parses incoming data, sends to getUserId for returned data
 func handleLogin(w http.ResponseWriter, r *http.Request, db *sql.DB) {
@@ -62,26 +57,23 @@ func handleLogin(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			Data:    nil,
 		}
 		fmt.Fprintf(w, toJSON(message))
-		return 
+		return
 	}
 	var loginData LoginDetails
 	err := json.NewDecoder(r.Body).Decode(&loginData)
 	if err != nil {
-		log.Fatal(err)
+		SendErrorMessage(err.Error(), w)
 	}
-	var user LoginResult
-	user = getUserID(loginData, db)
-	userToken, tokenErr := CreateToken(user.UserID, db)
+	var ID int
+	err3 := db.QueryRow("select user_id from users where email=$1", loginData.Email).Scan(&ID)
+	if err3!=nil{
+	SendErrorMessage(err3.Error(), w)
+	}
+	userToken, tokenErr := CreateToken(ID, db)
 	if tokenErr != nil {
-		message := Response{
-			Message: tokenErr,
-			Success: false,
-			Data:    nil,
-		}
-
-		w.Header().Set("Content-type", "application/json")
-		fmt.Fprintf(w, toJSON(message))
+		SendErrorMessage(*tokenErr, w)
 		return
+
 	}
 	response := Response{
 		Message: nil,
@@ -95,10 +87,14 @@ func handleLogin(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	fmt.Fprintf(w, toJSON(response))
 	return
 }
-
+func handleLogout(db *sql.DB, w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		SendErrorMessage("Please use POST", w)
+	}
+}
 func handleRegister(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "POST" {
-		return
+	if r.Method != "POST" {
+		SendErrorMessage("Please use POST", w)
 	}
 
 }
@@ -116,9 +112,9 @@ func (h MyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "/register":
 		fmt.Print("/register")
 		handleRegister(w, r)
-	case "/token":
-		fmt.Print("/token")
-		SendToken(1, h.db, w, r)
+	case "/logout":
+		fmt.Print("/logout")
+		handleLogout(h.db, w, r)
 	default:
 		http.NotFound(w, r)
 	}

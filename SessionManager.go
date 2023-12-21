@@ -45,30 +45,20 @@ func CreateToken(userID int, db *sql.DB) (*token, *string) {
 	return &tokenRes, nil
 }
 func GetToken(userID int, db *sql.DB) (*token, *string) {
-	rows, err := db.Query("select user_token, token_time from users where user_token is not null and user_id=$1;", userID)
-	defer rows.Close()
+	var tokenData token
+	err := db.QueryRow("select user_token, token_time from users where user_token is not null and user_id=$1;", userID).Scan(&tokenData.user_token, &tokenData.token_time)
 	if err != nil {
+		if err == sql.ErrNoRows {
+		        return nil, StrPtr("No rows found")
+		}
 		return nil, StrPtr("DB error")
 	}
-	var tokenData token
-	for rows.Next() {
-		err := rows.Scan(&tokenData.user_token, &tokenData.token_time)
-		if err != nil {
-			return nil, StrPtr("DB scan error")
-		}
-		return &tokenData, nil
-	}
-	return nil, StrPtr("Massive error: User not found")
+	return &tokenData, nil
 }
+
 func SendToken(userID int, db *sql.DB, w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
-		message := Response{
-			Message: StrPtr("Please use GET"),
-			Success: false,
-			Data:    nil,
-		}
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, toJSON(message))
+		SendErrorMessage("Please use GET", w)
 		return
 	}
 	

@@ -3,8 +3,11 @@ import ("encoding/json")
 func StrPtr(s string) *string {
 	return &s
 }
-
+// This is bad, really bad. But anything other than this will be annoying
 func toJSON(r Response) string {
-	jsonData, _ := json.Marshal(r)
+	jsonData, err := json.Marshal(r)
+	if err!=nil{
+		return 	
+	}
 	return string(jsonData)
-}
+

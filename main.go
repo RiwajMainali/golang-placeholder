@@ -73,7 +73,6 @@ func handleLogin(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	if tokenErr != nil {
 		SendErrorMessage(*tokenErr, w)
 		return
-
 	}
 	response := Response{
 		Message: nil,
